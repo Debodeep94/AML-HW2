@@ -228,20 +228,34 @@ for epoch in range(num_epochs):
         # the model with the best validation accuracy so-far (use best_model).          #
         #################################################################################
 
-        # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        
+         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
         if epoch == 0 or accuracy >= np.max(accuracy_val):
-          best_model = model
-          # saves the model checkpoint
-          torch.save(best_model.state_dict(), 'model.ckpt')
-          if epoch > 0:
-            print(f"Accuracy improved from {np.max(accuracy_val[(epoch-1)])}% to {accuracy}%")
+            count=0
+            best_model = model
+            # saves the model checkpoint
+            torch.save(best_model.state_dict(), 'model.ckpt')
             
-          
+            if epoch == 1:
+                print(
+                    f"Best accuracy improved from {np.max(accuracy_val[(epoch-1)])}% to {accuracy}%,\n count={count}")
+
+            if epoch > 1:
+                print(
+                    f"Best accuracy improved from {np.max(accuracy_val[:(epoch)])}% to {accuracy}%,\n count={count}")
+        
+            
+        else:
+            
+            count+=1
+            print(f"Best accuracy did not improve from {np.max(accuracy_val)}%,\ncount= {count}")
+            
+            if count==patience:
+                break
         eval_dict=zip(list(range(1,num_epochs+1)), accuracy_val)
         eval_dict=dict(eval_dict)
         max_key = max(eval_dict, key=lambda k: eval_dict[k])
-print(f"Highest validation accuracy is at epoch {max_key} with corresponding validation accuracy {eval_dict[max_key]}%")
+print(f"Highest validation accuracy is at epoch {max_key} with corresponding validation accuracy {eval_dict[max_key]}%,\n count={count}")
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 # Test the model
