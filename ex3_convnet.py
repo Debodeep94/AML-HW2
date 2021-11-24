@@ -30,7 +30,7 @@ print('Using device: %s'%device)
 input_size = 3
 num_classes = 10
 hidden_size = [128, 512, 512, 512, 512]
-num_epochs = 50
+num_epochs = 30
 batch_size = 200
 learning_rate = 2e-3
 learning_rate_decay = 0.95
@@ -39,8 +39,8 @@ num_training= 49000
 num_validation =1000
 norm_layer = None #norm_layer = 'BN'
 print(hidden_size)
-
-
+# dropout rate
+p = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
 #-------------------------------------------------
 # Load the CIFAR-10 dataset
@@ -51,10 +51,9 @@ print(hidden_size)
 #################################################################################
 data_aug_transforms = []
 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-#data_aug_transforms.append(torchvision.transforms.RandomCrop(32,padding=4))
-#data_aug_transforms.append(torchvision.transforms.RandomHorizontalFlip())
-#data_aug_transforms.append(torchvision.transforms.RandomVerticalFlip())
-
+data_aug_transforms += [transforms.RandomHorizontalFlip(0.5),
+                        transforms.RandomPerspective(distortion_scale=0.5, p=0.5, interpolation=3, fill=0),
+                        transforms.ColorJitter(brightness=0.1, contrast=0.05, saturation=0.1, hue=0.05)]
 
 # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 norm_transform = transforms.Compose(data_aug_transforms+[transforms.ToTensor(),
@@ -116,40 +115,45 @@ class ConvNet(nn.Module):
         
         #layer 1
         self.layer1=Conv2d(input_size, hidden_size[0],kernel_size=3, stride=1,padding=1)
+        self.drop1 = torch.nn.Dropout(p)
         self.batch1=torch.nn.BatchNorm2d(hidden_size[0])
         self.mx_strd1=nn.MaxPool2d(2,2)
         self.activation1=nn.ReLU()
         
         #layer 2
         self.layer2=Conv2d(hidden_size[0], hidden_size[1],kernel_size=3, stride=1,padding=1)
+        self.drop2 = torch.nn.Dropout(p)
         self.batch2=torch.nn.BatchNorm2d(hidden_size[1])
         self.mx_strd2=nn.MaxPool2d(2,2)
         self.activation2=nn.ReLU()
         
         #layer 3
         self.layer3=Conv2d(hidden_size[1], hidden_size[2], kernel_size=3,stride=1,padding=1)
+        self.drop3 = torch.nn.Dropout(p)
         self.batch3=torch.nn.BatchNorm2d(hidden_size[2])
         self.mx_strd3=nn.MaxPool2d(2,2)
         self.activation3=nn.ReLU()
         
         #layer 4
         self.layer4=Conv2d(hidden_size[2], hidden_size[3],kernel_size=3, stride=1,padding=1)
+        self.drop4 = torch.nn.Dropout(p)
         self.batch4=torch.nn.BatchNorm2d(hidden_size[3])
         self.mx_strd4=nn.MaxPool2d(2,2)
         self.activation4=nn.ReLU()
         
         #layer 5
         self.layer5=Conv2d(hidden_size[3], hidden_size[4],kernel_size=3, stride=1,padding=1)
+        self.drop5 = torch.nn.Dropout(p)
         self.batch5=torch.nn.BatchNorm2d(hidden_size[4])
         self.mx_strd5=nn.MaxPool2d(2,2)
         self.activation5=nn.ReLU()
         
         
-        layers=nn.ModuleList(modules=[self.layer1,self.batch1,self.mx_strd1,self.activation1,
-                             self.layer2,self.batch2,self.mx_strd2,self.activation2,
-                             self.layer3,self.batch3,self.mx_strd3,self.activation3,
-                             self.layer4,self.batch4,self.mx_strd4,self.activation4,
-                             self.layer5,self.batch5,self.mx_strd5,self.activation5])
+        layers=nn.ModuleList(modules=[self.layer1,self.drop1,self.batch1,self.mx_strd1,self.activation1,
+                             self.layer2,self.drop2,self.batch2,self.mx_strd2,self.activation2,
+                             self.layer3,self.drop3,self.batch3,self.mx_strd3,self.activation3,
+                             self.layer4,self.drop4,self.batch4,self.mx_strd4,self.activation4,
+                             self.layer5,self.drop5,self.batch5,self.mx_strd5,self.activation5])
         
         self.layers = nn.Sequential(*layers)
         
@@ -185,12 +189,8 @@ def PrintModelSize(model, disp=True):
     # training                                                                      #
     #################################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    model_sz=0
-    for params in list(model.parameters()):
-        nn=1
-        for s in list(params.size()):
-            nn = nn*s
-        model_sz += nn
+
+    model_sz = print(f"The number of parameters for the described model: {sum(parameter.numel() for parameter in model.parameters())}")
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return model_sz
@@ -255,7 +255,7 @@ best_accuracy = None
 accuracy_val = []
 best_loss=1000
 count=0
-patience=5
+patience=10
 best_model = type(model)(input_size, hidden_size, num_classes, norm_layer=norm_layer) # get a new instance
 #best_model = ConvNet(input_size, hidden_size, num_classes, norm_layer=norm_layer)
 for epoch in range(num_epochs):
@@ -349,6 +349,7 @@ for epoch in range(num_epochs):
         eval_dict=dict(eval_dict)
         max_key = max(eval_dict, key=lambda k: eval_dict[k])
 print(f"Highest validation accuracy is at epoch {max_key} with corresponding validation accuracy {eval_dict[max_key]}%,\n count={count}")
+        
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     
 
@@ -376,6 +377,7 @@ plt.show()
 # best model so far and perform testing with this model.                        #
 #################################################################################
 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
 best_model = torch.load('model.ckpt')
 model.load_state_dict(best_model)
 
@@ -408,5 +410,3 @@ VisualizeFilter(model)
 
 # Save the model checkpoint
 #torch.save(model.state_dict(), 'model.ckpt')
-
-
