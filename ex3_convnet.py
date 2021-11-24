@@ -51,8 +51,8 @@ print(hidden_size)
 #################################################################################
 data_aug_transforms = []
 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-data_aug_transforms.append(torchvision.transforms.RandomCrop(32,padding=4))
-data_aug_transforms.append(torchvision.transforms.RandomHorizontalFlip())
+#data_aug_transforms.append(torchvision.transforms.RandomCrop(32,padding=4))
+#data_aug_transforms.append(torchvision.transforms.RandomHorizontalFlip())
 #data_aug_transforms.append(torchvision.transforms.RandomVerticalFlip())
 
 
@@ -255,7 +255,7 @@ best_accuracy = None
 accuracy_val = []
 best_loss=1000
 count=0
-patience=10
+patience=5
 best_model = type(model)(input_size, hidden_size, num_classes, norm_layer=norm_layer) # get a new instance
 #best_model = ConvNet(input_size, hidden_size, num_classes, norm_layer=norm_layer)
 for epoch in range(num_epochs):
@@ -323,27 +323,32 @@ for epoch in range(num_epochs):
 
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        if epoch == 0 or accuracy > np.max(accuracy_val):
+        if epoch == 0 or accuracy >= np.max(accuracy_val):
             count=0
             best_model = model
             # saves the model checkpoint
             torch.save(best_model.state_dict(), 'model.ckpt')
-            if epoch > 0:
+            
+            if epoch == 1:
                 print(
-                    f"Accuracy improved from {(accuracy_val[(epoch-1)])}% to {accuracy}%")
+                    f"Best accuracy improved from {np.max(accuracy_val[(epoch-1)])}% to {accuracy}%,\n count={count}")
+
+            if epoch > 1:
+                print(
+                    f"Best accuracy improved from {np.max(accuracy_val[:(epoch)])}% to {accuracy}%,\n count={count}")
         
             
         else:
             
             count+=1
-            print(f"Accuracy did not improve from {np.max(accuracy_val)}%")
+            print(f"Best accuracy did not improve from {np.max(accuracy_val)}%,\ncount= {count}")
             
             if count==patience:
                 break
         eval_dict=zip(list(range(1,num_epochs+1)), accuracy_val)
         eval_dict=dict(eval_dict)
         max_key = max(eval_dict, key=lambda k: eval_dict[k])
-print(f"Highest validation accuracy is at epoch {max_key} with corresponding validation accuracy {eval_dict[max_key]}%")
+print(f"Highest validation accuracy is at epoch {max_key} with corresponding validation accuracy {eval_dict[max_key]}%,\n count={count}")
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     
 
